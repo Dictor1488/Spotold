@@ -1,17 +1,16 @@
-# Spotold
+# Spotold — WoT 2.4.1 standalone port
 
-Independent enemy spotting indicator port targeting World of Tanks 2.4.1. No `oldskool` / `modscore` imports.
+Recovered original OldSkool Spotted Status 1.4.0 behavior and built an independent implementation.
 
-## Implemented
-- State engine: never seen, spotted, spotted previously; reset on battle start.
-- Config model: two visual styles (eyes/dots), left/right positioning, horizontal offset, colorblind indicators, optional prestige hiding.
-- Unit tests: `python -m unittest discover -s tests` (3 passing).
+## Implemented in the repository
+- Original four status transitions (1 never seen, 2 visible, 3 vanished, 4 dead).
+- Exact original icons and label geometry (see `spotold/status.py`, `spotold/config.py`).
+- Tests for state changes and geometry.
 
-## Pending (NOT READY FOR GAME INSTALLATION)
-- Recover and validate original protected `mod_spottedStatus.pyc` behavior.
-- Port actual 2.4.1 battle visibility events and native players-panel integration.
-- Package the eight original PNG assets in a WOT-compatible distribution and verify gameplay.
+## Standalone candidate package
+A separate candidate WOTMOD was assembled and statically verified in the associated ChatGPT conversation: `Spotold_standalone_2.4.1_candidate.zip`. It includes a standalone `mod_spotold.py`, the original 8 PNG icons and a self-contained copy of the panel injector SWF. It does not import `gui.oldskool` or `modscore`. The standalone runtime source and binary are **not yet checked into this repository**.
 
-Original mod reference: `spottedStatus_1.4.0.zip`; old panel API reference: `modscore(1).zip`.
+## Verification pending
+The original panel injector SWF was extracted from the 2.4.0.0 modscore resource package. 2.4.1 actual panel registration and runtime behavior have **not been tested in a game client**. A successful syntax/archive check does not establish in-game compatibility. In particular the new 2.4.1 view registration API may require a change.
 
-The provided `deobfuscate(4).py` relies on Python 2.7, executes extracted bytecode and is not safe to run against untrusted artifacts outside isolation. It was inspected but **not executed**. The supplied `.skill` pipeline also refers to a separate missing `deobfuscate_protected.py` tool. No full decompilation or in-game compatibility is claimed.
+Do not publish as a production-ready 2.4.1 release without battle testing and checking `python.log`.
