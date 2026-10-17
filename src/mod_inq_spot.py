@@ -12,13 +12,7 @@ from gui.battle_control.arena_info.settings import VehicleSpottedStatus, INVALID
 from helpers import dependency
 from skeletons.account_helpers.settings_core import ISettingsCore
 from account_helpers.settings_core.settings_constants import GRAPHICS
-from gui.Scaleform.framework import g_entitiesFactories, ViewSettings, ScopeTemplates
-from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
-from gui.Scaleform.framework.entities.View import View
-from gui.Scaleform.framework.managers.loaders import SFViewLoadParams
-from frameworks.wulf import WindowLayer
-from gui.shared.personality import ServicesLocator
-from skeletons.gui.app_loader import GuiGlobalSpaceID
+from inq_spot_gameface import create_overlay, update_overlay, close_overlay
 
 LOG = logging.getLogger('INQ_SPOT')
 CONFIG = {'enabled': True, 'style': 1, 'align': 1, 'offsetX': 0, 'hidePrestige': False}
@@ -48,33 +42,6 @@ def _geometry():
         pass
     cell = {'width': 24, 'height': 24, 'x': x, 'y': 0}
     return {'isHtml': True, 'left': dict(cell), 'right': dict(cell)}
-
-class PanelsUI(BaseDAAPIComponent):
-    def _populate(self):
-        super(PanelsUI, self)._populate()
-        global _PANEL
-        _PANEL = self
-        _safe(self.as_createS, 'PSI', 'Label', _geometry())
-        if _controller.active:
-            _safe(_controller.ui_ready)
-
-    def _dispose(self):
-        global _PANEL
-        if _PANEL is self:
-            _PANEL = None
-        super(PanelsUI, self)._dispose()
-
-    def as_createS(self, linkage, kind, config):
-        if self._isDAAPIInited():
-            self.flashObject.as_create(linkage, kind, config)
-
-    def as_updateS(self, linkage, payload):
-        if self._isDAAPIInited():
-            self.flashObject.as_update(linkage, payload)
-
-    def as_deleteS(self, linkage):
-        if self._isDAAPIInited():
-            self.flashObject.as_delete(linkage)
 
 class Controller(object):
     def __init__(self):
@@ -122,8 +89,7 @@ class Controller(object):
                 LOG.exception('Failed to unsubscribe')
             self.arena = None
         self.states.clear()
-        if _PANEL is not None:
-            _safe(_PANEL.as_deleteS, 'PSI')
+        _safe(close_overlay)
 
     def ui_ready(self):
         if not self.active:
@@ -136,18 +102,16 @@ class Controller(object):
         for vid, info in arena.vehicles.iteritems():
             if info.get('team') != player.team:
                 self.states[vid] = 1 if info.get('isAlive', True) else 4
-        if _PANEL is not None:
-            _safe(_PANEL.as_createS, 'PSI', 'Label', _geometry())
-            for vid in self.states:
-                self.render(vid)
+        _safe(create_overlay, _geometry())
+        for vid in self.states:
+            self.render(vid)
 
     def render(self, vid):
-        if _PANEL is None or not self.active or not self.enemy(vid):
+        if not self.active or not self.enemy(vid):
             return
         state = self.states.get(vid)
         if state is not None:
-            _safe(_PANEL.as_updateS, 'PSI',
-                  {'vehicleID': vid, 'text': _icon(state, self.colorblind)})
+            _safe(update_overlay, vid, state, CONFIG['style'], self.colorblind)
 
     def aoi(self, vid, visible):
         if not self.active or not self.enemy(vid) or self.states.get(vid) in (None, 4):
@@ -208,41 +172,23 @@ def _vehicle_info(base, obj, info, overrides):
                 obj._data[key] = 0
     return result
 
-def _enter(spaceID):
-    if spaceID == GuiGlobalSpaceID.BATTLE:
-        try:
-            app = ServicesLocator.appLoader.getDefBattleApp()
-            if app:
-                app.loadView(SFViewLoadParams('SpotoldPanelInjector'))
-        except Exception:
-            LOG.exception('Cannot load INQ SPOT SWF')
-
 def init():
     global _registered
     if _registered:
         return
-    g_entitiesFactories.addSettings(ViewSettings('SpotoldPanelInjector', View,
-        'playersPanelAPI_modsCore.swf', WindowLayer.WINDOW, None, ScopeTemplates.GLOBAL_SCOPE))
-    g_entitiesFactories.addSettings(ViewSettings('PlayerPanelsUI', PanelsUI,
-        None, WindowLayer.UNDEFINED, None, ScopeTemplates.DEFAULT_SCOPE))
     _patch(PlayerAvatar, '_PlayerAvatar__startGUI', _start)
     _patch(PlayerAvatar, '_PlayerAvatar__destroyGUI', _destroy)
     _patch(ArenaVehiclesPlugin, '_setInAoI', _aoi)
     _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _battle_spotted)
     _patch(VehicleInfoComponent, 'addVehicleInfo', _vehicle_info)
-    ServicesLocator.appLoader.onGUISpaceEntered += _enter
     _registered = True
-    LOG.info('INQ SPOT initialized')
+    LOG.info('INQ SPOT Gameface controller initialized')
 
 def fini():
     global _registered
     if not _registered:
         return
     _safe(_controller.stop)
-    try:
-        ServicesLocator.appLoader.onGUISpaceEntered -= _enter
-    except Exception:
-        LOG.exception('Could not unsubscribe')
     for obj, name, original, wrapped in reversed(_originals):
         if getattr(obj, name, None) is wrapped:
             setattr(obj, name, original)
