@@ -13,9 +13,9 @@ ROOT = pathlib.Path(__file__).resolve().parent
 def build(python27):
     config = json.loads((ROOT / 'build.json').read_text(encoding='utf-8'))
     source = ROOT / 'src/mod_inq_spot.py'
-    resources = ROOT / 'assets'
-    icons = sorted(resources.glob('gui/spottedstatus/styles/*/*.png'))
-    flash = resources / 'flash/playersPanelAPI_modsCore.swf'
+    resources = ROOT
+    icons = sorted((ROOT / 'gui/spottedstatus/styles').glob('*/*.png'))
+    flash = ROOT / 'assets/flash/playersPanelAPI_modsCore.swf'
     if len(icons) != 8 or not flash.is_file():
         raise RuntimeError('Missing eight PNG icons or panel SWF in assets/.')
     output = ROOT / 'dist'
