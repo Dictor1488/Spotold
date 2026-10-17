@@ -56,13 +56,13 @@ jobs:
           & $python2 --version
 
       - name: Set up Java
-                uses: actions/setup-java@v4
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
 
       - name: Cache Flex SDK
-                id: cache-flex
+        id: cache-flex
         uses: actions/cache@v4
         with:
           path: C:\flex-sdk
@@ -110,7 +110,7 @@ jobs:
           Write-Host 'All 9 AS3 libraries available locally'
 
       - name: Configure playerglobal
-                shell: pwsh
+        shell: pwsh
         run: |
           $source = 'as3\libs\playerglobal.swc'
           if (-not (Test-Path $source)) { throw 'as3/libs/playerglobal.swc is missing' }
@@ -126,7 +126,7 @@ jobs:
           }
 
       - name: Compile INQ SPOT SWF
-                shell: pwsh
+        shell: pwsh
         run: |
           $mxmlc = 'C:\flex-sdk\bin\mxmlc.bat'
           if (-not (Test-Path $mxmlc)) { throw 'mxmlc.bat was not found' }
