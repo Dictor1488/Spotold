@@ -1,0 +1,8 @@
+{
+  "id": "me.inq.spot",
+  "name": "INQ SPOT",
+  "version": "0.3.0-beta.1",
+  "game_version": "2.4.1.0",
+  "description": "Standalone enemy spotted status indicators",
+  "author": "INQ"
+}
