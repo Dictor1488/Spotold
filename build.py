@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a WoT 2.4.1 .wotmod using a real Python 2.7 interpreter."""
+"""INQ SPOT 2.4.1 Gameface package builder. Never packs SWF."""
 import argparse
 import json
 import pathlib
@@ -11,37 +11,47 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parent
 
 def build(python27):
-    config = json.loads((ROOT / 'build.json').read_text(encoding='utf-8'))
-    source = ROOT / 'src/mod_inq_spot.py'
-    resources = ROOT
-    icons = sorted((ROOT / 'gui/spottedstatus/styles').glob('*/*.png'))
-    flash = ROOT / 'assets/flash/playersPanelAPI_modsCore.swf'
-    if len(icons) != 8 or not flash.is_file():
-        raise RuntimeError('Missing eight PNG icons or panel SWF in assets/.')
-    output = ROOT / 'dist'
+    cfg=json.loads((ROOT/'build.json').read_text(encoding='utf-8'))
+    output=ROOT/'dist'
     output.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory() as temp:
-        target = pathlib.Path(temp) / 'mod_inq_spot.pyc'
-        subprocess.run([python27, '-c',
-          'import py_compile,sys;py_compile.compile(sys.argv[1],cfile=sys.argv[2],dfile="mod_inq_spot.py",doraise=True)',
-          str(source),str(target)],check=True)
-        if target.read_bytes()[:4] != bytes.fromhex('03f30d0a'):
-            raise RuntimeError('Python 2.7 required (wrong pyc magic)')
-        xml = ET.Element('root')
+    icons=sorted((ROOT/'gui/spottedstatus/styles').glob('*/*.png'))
+    if len(icons)!=8:
+        raise RuntimeError('Expected eight PNG icons in gui/spottedstatus/styles/')
+    assets=sorted((ROOT/'resources/gui/gameface/mods/inq_spot').glob('*'))
+    if len(assets)<3:
+        raise RuntimeError('Missing HTML/CSS/JS Gameface assets')
+    source=[ROOT/'src/mod_inq_spot.py',ROOT/'src/inq_spot_gameface.py']
+    with tempfile.TemporaryDirectory() as tmp:
+        compiled=[]
+        for src in source:
+            target=pathlib.Path(tmp)/(src.stem+'.pyc')
+            subprocess.run([python27,'-c',
+              'import py_compile,sys;py_compile.compile(sys.argv[1],cfile=sys.argv[2],dfile=sys.argv[1].split("/")[-1],doraise=True)',
+              str(src),str(target)],check=True)
+            if target.read_bytes()[:4]!=bytes.fromhex('03f30d0a'):
+                raise RuntimeError('Python 2.7 interpreter is required')
+            compiled.append((src,target))
+        root=ET.Element('root')
         for key in ('id','version','name','description'):
-            ET.SubElement(xml,key).text = config[key]
-        archive = output / ('INQ_SPOT_' + config['version'] + '.wotmod')
-        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
-            z.writestr('meta.xml', ET.tostring(xml,encoding='utf-8'))
-            z.write(target,'res/scripts/client/gui/mods/mod_inq_spot.pyc')
-            z.write(flash,'res/gui/flash/playersPanelAPI_modsCore.swf')
+            ET.SubElement(root,key).text=cfg[key]
+        target=output/('INQ_SPOT_'+cfg['version']+'.wotmod')
+        with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
+            z.writestr('meta.xml',ET.tostring(root,encoding='utf-8'))
+            for src,pyc in compiled:
+                z.write(pyc,'res/scripts/client/gui/mods/'+src.stem+'.pyc')
             for icon in icons:
-                z.write(icon,'res/'+icon.relative_to(resources).as_posix())
-        with zipfile.ZipFile(archive) as z:
-            assert z.testzip() is None
-        print(archive)
+                z.write(icon,'res/'+icon.relative_to(ROOT).as_posix())
+            for asset in assets:
+                if asset.is_file():
+                    z.write(asset,'res/'+asset.relative_to(ROOT/'resources').as_posix())
+            for item in (ROOT/'resources/mods/configs/res_map').glob('*.json'):
+                z.write(item,item.relative_to(ROOT/'resources').as_posix())
+        with zipfile.ZipFile(target) as z:
+            if z.testzip() is not None: raise RuntimeError('Bad WOTMOD archive')
+            assert not any(n.endswith('.swf') for n in z.namelist())
+        print(target)
 
-if __name__ == '__main__':
+if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--python27',required=True)
     build(parser.parse_args().python27)
