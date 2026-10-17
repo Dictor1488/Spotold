@@ -13,7 +13,7 @@ Independent enemy spotting status mod targeting **World of Tanks 2.4.1.0**.
 
 ## Resources
 
-The complete working source bundle prepared during development includes 8 icon PNGs and the legacy SWF panel injector in `assets/`. **Those binary files are NOT yet present in GitHub.** Download `INQ_SPOT_source_0.3.0-beta.1.zip` from the originating ChatGPT conversation for the complete local build project. CI in this repository deliberately fails with a missing-asset error until the resources are committed.
+All eight PNG indicators are already committed in `gui/spottedstatus/styles/{0,1}/`. The legacy SWF panel injector is not yet present in GitHub; `build.py` expects `assets/flash/playersPanelAPI_modsCore.swf`. Download `INQ_SPOT_source_0.3.0-beta.1.zip` from the originating ChatGPT conversation for the complete local build project. CI still requires the missing SWF file before building a complete .wotmod.
 
 ## Build from complete source archive
 
@@ -23,6 +23,6 @@ Build output: `dist/INQ_SPOT_0.3.0-beta.1.wotmod`. Install in `mods/2.4.1.0/`.
 
 ## Release policy
 
-Create a `v0.3.0-beta.1` tag **only after** all assets are in GitHub and the 2.4.1 GUI lifecycle is validated. The workflow automatically publishes a GitHub prerelease from that tag.
+Create a `v0.3.0-beta.1` tag **only after** the SWF is in GitHub and the 2.4.1 GUI lifecycle is validated. The workflow automatically publishes a GitHub prerelease from that tag.
 
 **Known risk:** the bundled renderer uses a legacy SWF. A successful archive/syntax test does not prove it will initialize correctly in the 2.4.1 client. Verify in battle using `python.log`.
