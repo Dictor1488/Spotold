@@ -15,6 +15,8 @@ from account_helpers.settings_core.settings_constants import GRAPHICS
 from gui.mods.inq_spot_gameface import create_overlay, update_overlay, close_overlay
 
 LOG = logging.getLogger('INQ_SPOT')
+LOG.setLevel(logging.DEBUG)
+LOG.warning('[DIAG] module imported; Gameface diagnostic build')
 CONFIG = {'enabled': True, 'style': 1, 'align': 1, 'offsetX': 0, 'hidePrestige': False}
 STATES = (None, 'missing', 'detected', 'undetected', '')
 _PANEL = None
@@ -70,10 +72,12 @@ class Controller(object):
         return arena.guiType in modes
 
     def start(self):
+        LOG.warning('[DIAG] battle start; current_active=%s', self.active)
         self.stop()
         if not CONFIG['enabled'] or self.special():
             return
         self.active = True
+        LOG.warning('[DIAG] battle eligible, preparing arena and Gameface')
         self.colorblind = bool(dependency.instance(ISettingsCore).getSetting(GRAPHICS.COLOR_BLIND))
         self.arena = avatar_getter.getArena()
         if self.arena:
@@ -88,6 +92,7 @@ class Controller(object):
             except Exception:
                 LOG.exception('Failed to unsubscribe')
             self.arena = None
+        LOG.warning('[DIAG] stop battle; cached=%s', len(self.states))
         self.states.clear()
         _safe(close_overlay)
 
@@ -102,7 +107,9 @@ class Controller(object):
         for vid, info in arena.vehicles.iteritems():
             if info.get('team') != player.team:
                 self.states[vid] = 1 if info.get('isAlive', True) else 4
-        _safe(create_overlay, _geometry())
+        LOG.warning('[DIAG] arena roster initialized: enemies=%d', len(self.states))
+        result = _safe(create_overlay, _geometry())
+        LOG.warning('[DIAG] create_overlay result=%r', result)
         for vid in self.states:
             self.render(vid)
 
@@ -111,6 +118,7 @@ class Controller(object):
             return
         state = self.states.get(vid)
         if state is not None:
+            LOG.debug('[DIAG] render vehicleID=%s state=%s', vid, state)
             _safe(update_overlay, vid, state, CONFIG['style'], self.colorblind)
 
     def aoi(self, vid, visible):
@@ -118,11 +126,13 @@ class Controller(object):
             return
         state = 2 if visible else 3
         if self.states.get(vid) != state:
+            LOG.warning('[DIAG] AOI vehicleID=%s spotted=%s state=%s->%s', vid, visible, self.states.get(vid), state)
             self.states[vid] = state
             self.render(vid)
 
     def killed(self, victimID, killerID, equipmentID, reason, numVehiclesAffected):
         if self.active and self.enemy(victimID) and self.states.get(victimID) != 4:
+            LOG.warning('[DIAG] destroyed vehicleID=%s', victimID)
             self.states[victimID] = 4
             self.render(victimID)
 
@@ -133,6 +143,7 @@ def _patch(obj, name, handler):
     def wrapped(*args, **kwargs):
         return handler(base, *args, **kwargs)
     setattr(obj, name, wrapped)
+    LOG.warning('[DIAG] hook installed %s.%s', getattr(obj, '__name__', str(obj)), name)
     _originals.append((obj, name, base, wrapped))
 
 def _start(base, avatar, *args, **kwargs):
@@ -182,6 +193,7 @@ def init():
     _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _battle_spotted)
     _patch(VehicleInfoComponent, 'addVehicleInfo', _vehicle_info)
     _registered = True
+    LOG.warning('[DIAG] all game hooks registered')
     LOG.info('INQ SPOT Gameface controller initialized')
 
 def fini():
