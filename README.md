@@ -1,29 +1,24 @@
-# INQ SPOT — Gameface prototype (WoT 2.4.1.0)
+# INQ SPOT — AS3 player-panel beta for World of Tanks 2.4.1
 
-Status: **development / not a verified working in-game release**.
+This branch replaces the standalone Gameface overlay with an embedded **ActionScript 3 / Scaleform** component based on the working player-row resolution in `Dictor1488/HpE`. It uses **no OldSkool Python core** and preserves the enemy spotting state transitions from the recovered `mod_spottedStatus.py`.
 
-## Architecture
-- `src/mod_inq_spot.py` — original spotting logic from recovered OldSkool 1.4.0 Python, event hooks, no OldSkool dependency.
-- `src/inq_spot_gameface.py` — Wulf/Gameface ViewModel, ViewImpl, WindowImpl adapter.
-- `resources/gui/gameface/mods/inq_spot/` — HTML/CSS/JavaScript.
-- `resources/gui/gen_resources/inq_spot.json` — WoT 2.4.1 native layout resource registration.
-- `gui/spottedstatus/styles/` — original eight PNGs already tracked in Git.
-- `build.py` — compiles the two Python files using Python 2.7 and packages assets into `.wotmod`.
+## Files
 
-No SWF or Scaleform renderer is used. The minimap/battle hooks are still imported from legacy-named game Python packages because they supply spotting events, **not** for graphics rendering.
+- `src/mod_inq_spot.py`: spotting hooks, initial enemy state, killed vehicle handling and reset
+- `src/inq_spot_as3.py`: standalone DAAPI bridge and battle-view registration following HpE
+- `as3/src_flash/src/InqSpotPanel.as`: AS3 injector
+- `as3/src_flash/src/com/dictor/spot/battle/SpotPanel.as`: positions each icon under its **actual player-panel row**, using `getHolderByVehicleID(vehicleID)`
+- `as3/src_flash/src/com/dictor/hpe/injector/`: component registration classes reused from HpE
+- `gui/spottedstatus/styles/`: eight original PNG indicators
+- `build.py`: Python 2.7 compilation and stored-format WOTMOD packaging
+- `.github/workflows/release.yml`: HPE-based Flex AS3 compilation and release automation. The workflow retrieves compiler SWCs from public HpE repo.
 
-## Known incomplete parts
-- **Row positioning:** Gameface JavaScript currently receives vehicleID/state/icon style but DOES NOT map vehicle IDs to actual players-panel row elements. The icons therefore have no correct computed position yet. Do not claim UI feature complete.
-- Layout loading and `R.mods.me.inq.spot.InqSpotBattleView` resolution have not been validated inside the official 2.4.1 client.
-- The current HTML JS references `../libs/model.js` as in the Weather sample; this library is not bundled and may need a local adapter or alternate ViewModel binding.
-- 2.4.1 production release must wait for an actual in-game battle test and game logs.
+## Display behavior
 
-## Build
-On Windows with Python 2.7 installed:
-`python build.py --python27 C:\\Python27\\python.exe`
+Each icon follows the player-panel row rather than using a fixed 25-pixel grid. Python sends state 1 (never detected), 2 (detected), 3 (missing), 4 (dead). The ActionScript control uses PNGs missing/detected/undetected respectively and hides dead vehicles. Enemy-only rows are targeted.
 
-The GitHub Actions workflow builds on a v* tag and marks any release as prerelease. **Do not tag a release as stable yet.**
+## Test status
 
-## WoT package loader fix (2026-10-17)
+**Untested in the game client.** The changes are committed as a beta source port. CI needs to compile `inqSpotPanel.swf` using Adobe Flex and the HpE SWCs, then create `INQ_SPOT_<version>.wotmod`. After installing the built package in `mods/2.4.1.0/`, test panel modes and replay spotting transitions and provide `python.log` / `game.log` if necessary.
 
-Previous build used ZIP_DEFLATED. Original WoT 2.4.x .wotmods use ZIP_STORED. The builder now writes uncompressed ZIP entries and checks that meta.xml is the first entry, the archive only has meta.xml/res/* paths, and all entries are stored. This addresses a likely cause of the game's `Mod package ... not loaded` message; it is not a substitute for testing the rebuilt package. Do not reinstall the old 0.3.0-beta.1 build without regenerating it from the updated code.
+**Architecture tradeoff:** AS3 graphics necessarily use the game's Scaleform runtime. This does not depend on the original OldSkool modsCore, but it is not Gameface.
