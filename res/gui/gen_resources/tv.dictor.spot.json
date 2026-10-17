@@ -1,0 +1,11 @@
+[
+    {
+        "type": "Layout",
+        "path": "coui://gui/gameface/mods/spotted/SpottedPanel.html",
+        "parameters": {
+            "entrance": "SpottedPanel",
+            "impl": "gameface"
+        },
+        "id": "R.mods.dictor.spot.SpottedPanel"
+    }
+]
