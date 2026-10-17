@@ -14,7 +14,6 @@ from account_helpers.settings_core.settings_constants import GRAPHICS
 from gui.mods.inq_spot_as3 import g_bridge, initialize as init_panel, finalize as fini_panel
 
 LOG = logging.getLogger('INQ_SPOT')
-LOG.setLevel(logging.DEBUG)
 CONFIG = {'enabled': True, 'style': 1, 'align': 1, 'offsetX': 0,
           'hidePrestige': False}
 _originals = []
@@ -56,7 +55,6 @@ class Controller(object):
         if self.arena:
             self.arena.onVehicleKilled += self.killed
         self.seed()
-        LOG.warning('[DIAG] battle started: %d enemies', len(self.states))
 
     def seed(self):
         player = BigWorld.player()
@@ -76,14 +74,12 @@ class Controller(object):
             g_bridge.send('as_setStateS', vid, state)
         g_bridge.send('as_setVisibilityS', True)
         g_bridge.send('as_refreshAllS')
-        LOG.warning('[DIAG] AS3 pushed %d vehicle states', len(self.states))
 
     def aoi(self, vid, visible):
         if not self.active or not self.enemy(vid) or self.states.get(vid) in (None, 4):
             return
         state = 2 if visible else 3
         if self.states.get(vid) != state:
-            LOG.warning('[DIAG] AOI vehicle=%s %s->%s', vid, self.states.get(vid), state)
             self.states[vid] = state
             g_bridge.send('as_setStateS', vid, state)
 
@@ -157,7 +153,7 @@ def init():
     _patch(ArenaVehiclesPlugin, '_setInAoI', _aoi)
     _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _spotted)
     _initialized = True
-    LOG.warning('INQ SPOT AS3 registration complete')
+    LOG.info('INQ SPOT AS3 registration complete')
 
 def fini():
     global _initialized
