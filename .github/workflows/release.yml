@@ -9,12 +9,7 @@ on:
       version:
         description: 'Mod version'
         required: true
-        default: '0.4.0-beta.1'
-      build_swf:
-        description: 'Build SWF files'
-        required: true
-        type: boolean
-        default: true
+        default: '1.0.0'
 
 permissions:
   contents: write
@@ -61,22 +56,20 @@ jobs:
           & $python2 --version
 
       - name: Set up Java
-        if: inputs.build_swf == true || github.event_name == 'push'
-        uses: actions/setup-java@v4
+                uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
 
       - name: Cache Flex SDK
-        if: inputs.build_swf == true || github.event_name == 'push'
-        id: cache-flex
+                id: cache-flex
         uses: actions/cache@v4
         with:
           path: C:\flex-sdk
           key: flex-sdk-${{ env.FLEX_VERSION }}-inqspot-as3-v1
 
       - name: Download Apache Flex SDK
-        if: (inputs.build_swf == true || github.event_name == 'push') && steps.cache-flex.outputs.cache-hit != 'true'
+        if: steps.cache-flex.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $url = 'https://archive.apache.org/dist/flex/${{ env.FLEX_VERSION }}/binaries/apache-flex-sdk-${{ env.FLEX_VERSION }}-bin.zip'
@@ -117,8 +110,7 @@ jobs:
           Write-Host 'All 9 AS3 libraries available locally'
 
       - name: Configure playerglobal
-        if: inputs.build_swf == true || github.event_name == 'push'
-        shell: pwsh
+                shell: pwsh
         run: |
           $source = 'as3\libs\playerglobal.swc'
           if (-not (Test-Path $source)) { throw 'as3/libs/playerglobal.swc is missing' }
@@ -134,8 +126,7 @@ jobs:
           }
 
       - name: Compile INQ SPOT SWF
-        if: inputs.build_swf == true || github.event_name == 'push'
-        shell: pwsh
+                shell: pwsh
         run: |
           $mxmlc = 'C:\flex-sdk\bin\mxmlc.bat'
           if (-not (Test-Path $mxmlc)) { throw 'mxmlc.bat was not found' }
