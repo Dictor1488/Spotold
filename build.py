@@ -44,7 +44,7 @@ def build(python27):
             for asset in assets:
                 if asset.is_file():
                     z.write(asset,'res/'+asset.relative_to(ROOT/'resources').as_posix())
-            for item in (ROOT/'resources/mods/configs/res_map').glob('*.json'):
+            for item in (ROOT/'resources/gui/gen_resources').glob('*.json'):
                 z.write(item,item.relative_to(ROOT/'resources').as_posix())
         with zipfile.ZipFile(target) as z:
             if z.testzip() is not None: raise RuntimeError('Bad WOTMOD archive')
