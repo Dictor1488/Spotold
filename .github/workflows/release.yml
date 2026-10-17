@@ -95,15 +95,26 @@ jobs:
           Remove-Item C:\flex-temp -Recurse -Force
           if (-not (Test-Path 'C:\flex-sdk\bin\mxmlc.bat')) { throw 'mxmlc.bat is missing' }
 
-      - name: Fetch compiler SWC dependencies from HpE
+      - name: Verify local AS3 libraries
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/Dictor1488/HpE.git _hpe_reference
-          New-Item -ItemType Directory -Force as3/libs | Out-Null
-          Copy-Item _hpe_reference/as3/libs/*.swc as3/libs/ -Force
-          if (-not (Test-Path as3/libs/gui_battle-1.0-SNAPSHOT.swc)) {
-            throw "Missing HpE AS3 dependency libraries"
+          $required = @(
+            'playerglobal.swc',
+            'base_app-1.0-SNAPSHOT.swc',
+            'battle.swc',
+            'common-1.0-SNAPSHOT.swc',
+            'common_i18n_library-1.0-SNAPSHOT.swc',
+            'gui_base-1.0-SNAPSHOT.swc',
+            'gui_battle-1.0-SNAPSHOT.swc',
+            'gui_lobby-1.0-SNAPSHOT.swc',
+            'lobby.swc'
+          )
+          foreach ($name in $required) {
+            $file = Join-Path 'as3/libs' $name
+            if (-not (Test-Path $file)) { throw "Missing required AS3 library: $file" }
+            if ((Get-Item $file).Length -eq 0) { throw "Empty AS3 library: $file" }
           }
+          Write-Host 'All 9 AS3 libraries available locally'
 
       - name: Configure playerglobal
         if: inputs.build_swf == true || github.event_name == 'push'
