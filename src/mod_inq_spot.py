@@ -12,7 +12,7 @@ from gui.battle_control.arena_info.settings import VehicleSpottedStatus, INVALID
 from helpers import dependency
 from skeletons.account_helpers.settings_core import ISettingsCore
 from account_helpers.settings_core.settings_constants import GRAPHICS
-from inq_spot_gameface import create_overlay, update_overlay, close_overlay
+from gui.mods.inq_spot_gameface import create_overlay, update_overlay, close_overlay
 
 LOG = logging.getLogger('INQ_SPOT')
 CONFIG = {'enabled': True, 'style': 1, 'align': 1, 'offsetX': 0, 'hidePrestige': False}
