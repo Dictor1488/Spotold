@@ -1,32 +1,38 @@
 # -*- coding: utf-8 -*-
-"""Independent spotting state model. Requires visibility events from game adapter."""
-NEVER_SEEN = 0
-VISIBLE = 1
-LOST = 2
+"""Original OldSkool 1.4.0 spotting state transitions; no core dependency."""
+NOT_DETECTED = 1
+DETECTED = 2
+MISSING = 3
+DEAD = 4
 
 class SpotStatus(object):
     def __init__(self):
         self._states = {}
 
-    def reset(self, vehicle_ids):
-        self._states = dict((int(vid), NEVER_SEEN) for vid in vehicle_ids)
-
-    def update(self, vehicle_id, is_visible):
-        vid = int(vehicle_id)
-        if vid not in self._states:
-            return None
-        before = self._states[vid]
-        if is_visible:
-            after = VISIBLE
-        elif before == VISIBLE:
-            after = LOST
+    def reset(self, enemy_vehicles):
+        if hasattr(enemy_vehicles, 'items'):
+            self._states = dict((int(vid), NOT_DETECTED if alive else DEAD)
+                                for vid, alive in enemy_vehicles.items())
         else:
-            after = before
-        self._states[vid] = after
-        return after if after != before else None
+            self._states = dict((int(vid), NOT_DETECTED) for vid in enemy_vehicles)
 
-    def destroy(self, vehicle_id):
-        self._states.pop(int(vehicle_id), None)
+    def update(self, vehicle_id, is_in_aoi):
+        vid = int(vehicle_id)
+        before = self._states.get(vid)
+        if before is None or before == DEAD:
+            return None
+        after = DETECTED if is_in_aoi else MISSING
+        if before == after:
+            return None
+        self._states[vid] = after
+        return after
+
+    def kill(self, vehicle_id):
+        vid = int(vehicle_id)
+        if self._states.get(vid) == DEAD:
+            return None
+        self._states[vid] = DEAD
+        return DEAD
 
     def get(self, vehicle_id):
         return self._states.get(int(vehicle_id))
