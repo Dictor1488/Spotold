@@ -1,24 +1,31 @@
-# INQ SPOT — AS3 player-panel beta for World of Tanks 2.4.1
+# INQ SPOT 1.0.0
 
-This branch replaces the standalone Gameface overlay with an embedded **ActionScript 3 / Scaleform** component based on the working player-row resolution in `Dictor1488/HpE`. It uses **no OldSkool Python core** and preserves the enemy spotting state transitions from the recovered `mod_spottedStatus.py`.
+Standalone enemy spotting indicators for **World of Tanks 2.4.1**, using ActionScript 3 / Scaleform. Indicators attach to the actual enemy row through `getHolderByVehicleID(vehicleID)`, as in HpE. No OldSkool core is required.
 
-## Files
+## Spotting indicators
 
-- `src/mod_inq_spot.py`: spotting hooks, initial enemy state, killed vehicle handling and reset
-- `src/inq_spot_as3.py`: standalone DAAPI bridge and battle-view registration following HpE
-- `as3/src_flash/src/InqSpotPanel.as`: AS3 injector
-- `as3/src_flash/src/com/dictor/spot/battle/SpotPanel.as`: positions each icon under its **actual player-panel row**, using `getHolderByVehicleID(vehicleID)`
-- `as3/src_flash/src/com/dictor/hpe/injector/`: component registration classes reused from HpE
-- `gui/spottedstatus/styles/`: eight original PNG indicators
-- `build.py`: Python 2.7 compilation and stored-format WOTMOD packaging
-- `.github/workflows/release.yml`: HPE-based Flex AS3 compilation and release automation. The workflow retrieves compiler SWCs from public HpE repo.
+- `missing.png`: never spotted
+- `detected.png`: currently visible
+- `undetected.png`: previously spotted, now lost (or `colorblind.png` when colorblind mode is on)
+- Destroyed enemies: icon hidden.
 
-## Display behavior
+Eight original PNGs are retained in `gui/spottedstatus/styles/0` and `1`.
 
-Each icon follows the player-panel row rather than using a fixed 25-pixel grid. Python sends state 1 (never detected), 2 (detected), 3 (missing), 4 (dead). The ActionScript control uses PNGs missing/detected/undetected respectively and hides dead vehicles. Enemy-only rows are targeted.
+## Source structure
 
-## Test status
+- `src/mod_inq_spot.py` — battle hooks and spotting state controller (Python 2.7)
+- `src/inq_spot_as3.py` — DAAPI/AS3 communication and registration (Python 2.7)
+- `as3/src_flash/src/InqSpotPanel.as` — injector
+- `as3/src_flash/src/com/dictor/spot/battle/SpotPanel.as` — AS3 row attachment and icon presentation
+- `as3/src_flash/src/com/dictor/hpe/injector/` — battle injection primitives adapted from HpE
+- `as3/libs/` — required local SWC libraries
+- `build.py` — packages compiled SWF, Python bytecode and PNGs as uncompressed `.wotmod`
+- `.github/workflows/release.yml` — Windows/Flex CI and GitHub Release publishing
 
-**Untested in the game client.** The changes are committed as a beta source port. CI needs to compile `inqSpotPanel.swf` using Adobe Flex and the HpE SWCs, then create `INQ_SPOT_<version>.wotmod`. After installing the built package in `mods/2.4.1.0/`, test panel modes and replay spotting transitions and provide `python.log` / `game.log` if necessary.
+## Release
 
-**Architecture tradeoff:** AS3 graphics necessarily use the game's Scaleform runtime. This does not depend on the original OldSkool modsCore, but it is not Gameface.
+Manually run **Actions → Build and Release INQ SPOT AS3**, choose version `1.0.0`. Flex SWF compilation is mandatory for each build; Python 2.7 is required. The workflow publishes `dist/INQ_SPOT_1.0.0.wotmod` to Releases.
+
+## Verification
+
+The latest provided game log confirmed the 0.4.0-beta.1 WOTMOD loaded, the AS3 bridge and view initialized, 15 enemy states were sent, and spotting transitions arrived without INQ SPOT errors. This supports releasing a clean version, although rendering alignment in all player-panel modes has not been independently confirmed. For in-game problems, send `game.log`.
