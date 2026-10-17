@@ -1,0 +1,12 @@
+[
+  {
+    "itemID": "mods/me/inq/spot/InqSpotBattleView",
+    "type": "Layout",
+    "path": "coui://gui/gameface/mods/inq_spot/InqSpotBattleView.html",
+    "parameters": {
+      "extension": "",
+      "entrance": "InqSpotBattleView",
+      "impl": "gameface"
+    }
+  }
+]
