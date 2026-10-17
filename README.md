@@ -23,3 +23,7 @@ On Windows with Python 2.7 installed:
 `python build.py --python27 C:\\Python27\\python.exe`
 
 The GitHub Actions workflow builds on a v* tag and marks any release as prerelease. **Do not tag a release as stable yet.**
+
+## WoT package loader fix (2026-10-17)
+
+Previous build used ZIP_DEFLATED. Original WoT 2.4.x .wotmods use ZIP_STORED. The builder now writes uncompressed ZIP entries and checks that meta.xml is the first entry, the archive only has meta.xml/res/* paths, and all entries are stored. This addresses a likely cause of the game's `Mod package ... not loaded` message; it is not a substitute for testing the rebuilt package. Do not reinstall the old 0.3.0-beta.1 build without regenerating it from the updated code.
