@@ -35,8 +35,8 @@ def build(python27):
         for key in ('id','version','name','description'):
             ET.SubElement(root,key).text=cfg[key]
         target=output/('INQ_SPOT_'+cfg['version']+'.wotmod')
-        with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
-            z.writestr('meta.xml',ET.tostring(root,encoding='utf-8'))
+        with zipfile.ZipFile(target,'w',zipfile.ZIP_STORED) as z:
+            z.writestr('meta.xml',ET.tostring(root,encoding='utf-8',xml_declaration=True))
             for src,pyc in compiled:
                 z.write(pyc,'res/scripts/client/gui/mods/'+src.stem+'.pyc')
             for icon in icons:
@@ -49,6 +49,9 @@ def build(python27):
         with zipfile.ZipFile(target) as z:
             if z.testzip() is not None: raise RuntimeError('Bad WOTMOD archive')
             assert not any(n.endswith('.swf') for n in z.namelist())
+            assert all(item.compress_type == zipfile.ZIP_STORED for item in z.infolist()), 'WoT requires stored entries'
+            assert z.namelist()[0] == 'meta.xml', 'meta.xml must be first entry'
+            assert all(item.filename == 'meta.xml' or item.filename.startswith('res/') for item in z.infolist()), 'Unexpected package path'
         print(target)
 
 if __name__=='__main__':
