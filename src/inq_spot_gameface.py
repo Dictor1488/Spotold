@@ -3,6 +3,8 @@
 import json
 import logging
 LOG = logging.getLogger('INQ_SPOT.gameface')
+LOG.setLevel(logging.DEBUG)
+LOG.warning('[DIAG] Gameface module imported')
 _window = None
 _view = None
 _pending = {}
@@ -16,7 +18,9 @@ from gui.impl.pub import ViewImpl, WindowImpl
 def _layout_id():
     try:
         from gui.impl.gen import R
-        return R.mods.me.inq.spot.InqSpotBattleView()
+        result = R.mods.me.inq.spot.InqSpotBattleView()
+        LOG.warning('[DIAG] layout resolved id=%r', result)
+        return result
     except Exception:
         LOG.exception('INQ SPOT Gameface layout is not registered')
         return None
@@ -43,6 +47,7 @@ class SpotView(ViewImpl):
 
     def _onLoading(self, *args, **kwargs):
         super(SpotView, self)._onLoading(*args, **kwargs)
+        LOG.warning('[DIAG] SpotView _onLoading')
         _refresh()
 
 class SpotWindow(WindowImpl):
@@ -52,6 +57,7 @@ class SpotWindow(WindowImpl):
             content=view, layer=WindowLayer.WINDOW)
 
     def _onReady(self):
+        LOG.warning('[DIAG] SpotWindow _onReady')
         self.show(focus=False)
         _refresh()
 
@@ -60,6 +66,7 @@ def _refresh():
         return
     try:
         data = {'geometry': _geometry, 'vehicles': _pending}
+        LOG.debug('[DIAG] ViewModel refresh vehicles=%d bytes=%d', len(_pending), len(json.dumps(data)))
         with _view.viewModel.transaction() as vm:
             vm.setPayload(json.dumps(data, separators=(',', ':')))
     except Exception:
@@ -67,15 +74,18 @@ def _refresh():
 
 def create_overlay(geometry):
     global _window, _view, _geometry
+    LOG.warning('[DIAG] create_overlay geometry=%r', geometry)
     _geometry = dict(geometry)
     if _window is None:
         layout = _layout_id()
         if layout is None:
+            LOG.error('[DIAG] no layout ID, Gameface window cannot open')
             return False
         try:
             _view = SpotView(layout)
             _window = SpotWindow(_view)
             _window.load()
+            LOG.warning('[DIAG] window.load() returned')
         except Exception:
             LOG.exception('Could not load INQ SPOT Gameface overlay')
             _window = None
@@ -87,11 +97,13 @@ def create_overlay(geometry):
 def update_overlay(vehicle_id, state, style, colorblind):
     if state not in (1, 2, 3, 4):
         return
+    LOG.debug('[DIAG] update_overlay id=%s state=%s', vehicle_id, state)
     _pending[str(vehicle_id)] = {'state': state, 'style': style, 'colorblind': bool(colorblind)}
     _refresh()
 
 def close_overlay():
     global _window, _view, _geometry
+    LOG.warning('[DIAG] close_overlay pending=%d', len(_pending))
     old = _window
     _window = None
     _view = None
