@@ -1,0 +1,252 @@
+# -*- coding: utf-8 -*-
+"""INQ SPOT — standalone beta for WoT 2.4.1."""
+import logging
+import BigWorld
+import constants
+from Avatar import PlayerAvatar
+from gui.battle_control import avatar_getter
+from gui.Scaleform.daapi.view.battle.shared.minimap.plugins import ArenaVehiclesPlugin
+from gui.Scaleform.daapi.view.battle.shared.stats_exchange.vehicle import VehicleInfoComponent
+from gui.battle_control.controllers.battle_field_ctrl import BattleFieldCtrl
+from gui.battle_control.arena_info.settings import VehicleSpottedStatus, INVALIDATE_OP
+from helpers import dependency
+from skeletons.account_helpers.settings_core import ISettingsCore
+from account_helpers.settings_core.settings_constants import GRAPHICS
+from gui.Scaleform.framework import g_entitiesFactories, ViewSettings, ScopeTemplates
+from gui.Scaleform.framework.entities.BaseDAAPIComponent import BaseDAAPIComponent
+from gui.Scaleform.framework.entities.View import View
+from gui.Scaleform.framework.managers.loaders import SFViewLoadParams
+from frameworks.wulf import WindowLayer
+from gui.shared.personality import ServicesLocator
+from skeletons.gui.app_loader import GuiGlobalSpaceID
+
+LOG = logging.getLogger('INQ_SPOT')
+CONFIG = {'enabled': True, 'style': 1, 'align': 1, 'offsetX': 0, 'hidePrestige': False}
+STATES = (None, 'missing', 'detected', 'undetected', '')
+_PANEL = None
+_registered = False
+_originals = []
+
+def _safe(fn, *args):
+    try:
+        return fn(*args)
+    except Exception:
+        LOG.exception('INQ SPOT operation failed')
+        return None
+
+def _icon(state, colorblind):
+    if state == 4:
+        return ''
+    name = 'colorblind' if state == 3 and colorblind else STATES[state]
+    return '<img src="img://gui/spottedstatus/styles/%s/%s.png" width="19" height="19">' % (CONFIG['style'], name)
+
+def _geometry():
+    x = -109 if CONFIG['align'] == 0 else (4 if CONFIG['hidePrestige'] else 22)
+    try:
+        x += max(-150, min(150, int(CONFIG.get('offsetX', 0))))
+    except (TypeError, ValueError):
+        pass
+    cell = {'width': 24, 'height': 24, 'x': x, 'y': 0}
+    return {'isHtml': True, 'left': dict(cell), 'right': dict(cell)}
+
+class PanelsUI(BaseDAAPIComponent):
+    def _populate(self):
+        super(PanelsUI, self)._populate()
+        global _PANEL
+        _PANEL = self
+        _safe(self.as_createS, 'PSI', 'Label', _geometry())
+        if _controller.active:
+            _safe(_controller.ui_ready)
+
+    def _dispose(self):
+        global _PANEL
+        if _PANEL is self:
+            _PANEL = None
+        super(PanelsUI, self)._dispose()
+
+    def as_createS(self, linkage, kind, config):
+        if self._isDAAPIInited():
+            self.flashObject.as_create(linkage, kind, config)
+
+    def as_updateS(self, linkage, payload):
+        if self._isDAAPIInited():
+            self.flashObject.as_update(linkage, payload)
+
+    def as_deleteS(self, linkage):
+        if self._isDAAPIInited():
+            self.flashObject.as_delete(linkage)
+
+class Controller(object):
+    def __init__(self):
+        self.active = False
+        self.arena = None
+        self.states = {}
+        self.colorblind = False
+
+    def enemy(self, vid):
+        player = BigWorld.player()
+        arena = getattr(player, 'arena', None)
+        if arena is None:
+            return False
+        info = arena.vehicles.get(vid)
+        return info is not None and info.get('team') != player.team
+
+    def special(self):
+        arena = avatar_getter.getArena()
+        if arena is None:
+            return False
+        kinds = constants.ARENA_GUI_TYPE
+        modes = [kinds.EPIC_BATTLE, kinds.EVENT_BATTLES]
+        halloween = getattr(kinds, 'HALLOWEEN', None)
+        if halloween is not None:
+            modes.append(halloween)
+        return arena.guiType in modes
+
+    def start(self):
+        self.stop()
+        if not CONFIG['enabled'] or self.special():
+            return
+        self.active = True
+        self.colorblind = bool(dependency.instance(ISettingsCore).getSetting(GRAPHICS.COLOR_BLIND))
+        self.arena = avatar_getter.getArena()
+        if self.arena:
+            self.arena.onVehicleKilled += self.killed
+        self.ui_ready()
+
+    def stop(self):
+        self.active = False
+        if self.arena is not None:
+            try:
+                self.arena.onVehicleKilled -= self.killed
+            except Exception:
+                LOG.exception('Failed to unsubscribe')
+            self.arena = None
+        self.states.clear()
+        if _PANEL is not None:
+            _safe(_PANEL.as_deleteS, 'PSI')
+
+    def ui_ready(self):
+        if not self.active:
+            return
+        player = BigWorld.player()
+        arena = getattr(player, 'arena', None)
+        if arena is None:
+            return
+        self.states.clear()
+        for vid, info in arena.vehicles.iteritems():
+            if info.get('team') != player.team:
+                self.states[vid] = 1 if info.get('isAlive', True) else 4
+        if _PANEL is not None:
+            _safe(_PANEL.as_createS, 'PSI', 'Label', _geometry())
+            for vid in self.states:
+                self.render(vid)
+
+    def render(self, vid):
+        if _PANEL is None or not self.active or not self.enemy(vid):
+            return
+        state = self.states.get(vid)
+        if state is not None:
+            _safe(_PANEL.as_updateS, 'PSI',
+                  {'vehicleID': vid, 'text': _icon(state, self.colorblind)})
+
+    def aoi(self, vid, visible):
+        if not self.active or not self.enemy(vid) or self.states.get(vid) in (None, 4):
+            return
+        state = 2 if visible else 3
+        if self.states.get(vid) != state:
+            self.states[vid] = state
+            self.render(vid)
+
+    def killed(self, victimID, killerID, equipmentID, reason, numVehiclesAffected):
+        if self.active and self.enemy(victimID) and self.states.get(victimID) != 4:
+            self.states[victimID] = 4
+            self.render(victimID)
+
+_controller = Controller()
+
+def _patch(obj, name, handler):
+    base = getattr(obj, name)
+    def wrapped(*args, **kwargs):
+        return handler(base, *args, **kwargs)
+    setattr(obj, name, wrapped)
+    _originals.append((obj, name, base, wrapped))
+
+def _start(base, avatar, *args, **kwargs):
+    result = base(avatar, *args, **kwargs)
+    _safe(_controller.start)
+    return result
+
+def _destroy(base, avatar, *args, **kwargs):
+    _safe(_controller.stop)
+    return base(avatar, *args, **kwargs)
+
+def _aoi(base, obj, entry, isInAoI):
+    result = base(obj, entry, isInAoI)
+    if _controller.active:
+        for vid, mm_entry in obj._entries.iteritems():
+            if mm_entry == entry:
+                _safe(_controller.aoi, vid, isInAoI)
+                break
+    return result
+
+def _battle_spotted(base, obj, vehicleID, vehicleSpottedStatus):
+    if not _controller.active:
+        return base(obj, vehicleID, vehicleSpottedStatus)
+    if vehicleID in obj._aliveAllies or vehicleID in obj._BattleFieldCtrl__deadAllies:
+        return
+    ctx = obj._BattleFieldCtrl__battleCtx
+    dp = ctx.getArenaDP()
+    flags, vo = dp.updateVehicleSpottedStatus(vehicleID, VehicleSpottedStatus.DEFAULT)
+    if flags != INVALIDATE_OP.NONE:
+        obj.onSpottedStatusChanged([(flags, vo)], dp)
+
+def _vehicle_info(base, obj, info, overrides):
+    result = base(obj, info, overrides)
+    if CONFIG['hidePrestige'] and _controller.active:
+        for key in ('prestigeLevel', 'prestigeMarkId'):
+            if key in obj._data:
+                obj._data[key] = 0
+    return result
+
+def _enter(spaceID):
+    if spaceID == GuiGlobalSpaceID.BATTLE:
+        try:
+            app = ServicesLocator.appLoader.getDefBattleApp()
+            if app:
+                app.loadView(SFViewLoadParams('SpotoldPanelInjector'))
+        except Exception:
+            LOG.exception('Cannot load INQ SPOT SWF')
+
+def init():
+    global _registered
+    if _registered:
+        return
+    g_entitiesFactories.addSettings(ViewSettings('SpotoldPanelInjector', View,
+        'playersPanelAPI_modsCore.swf', WindowLayer.WINDOW, None, ScopeTemplates.GLOBAL_SCOPE))
+    g_entitiesFactories.addSettings(ViewSettings('PlayerPanelsUI', PanelsUI,
+        None, WindowLayer.UNDEFINED, None, ScopeTemplates.DEFAULT_SCOPE))
+    _patch(PlayerAvatar, '_PlayerAvatar__startGUI', _start)
+    _patch(PlayerAvatar, '_PlayerAvatar__destroyGUI', _destroy)
+    _patch(ArenaVehiclesPlugin, '_setInAoI', _aoi)
+    _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _battle_spotted)
+    _patch(VehicleInfoComponent, 'addVehicleInfo', _vehicle_info)
+    ServicesLocator.appLoader.onGUISpaceEntered += _enter
+    _registered = True
+    LOG.info('INQ SPOT initialized')
+
+def fini():
+    global _registered
+    if not _registered:
+        return
+    _safe(_controller.stop)
+    try:
+        ServicesLocator.appLoader.onGUISpaceEntered -= _enter
+    except Exception:
+        LOG.exception('Could not unsubscribe')
+    for obj, name, original, wrapped in reversed(_originals):
+        if getattr(obj, name, None) is wrapped:
+            setattr(obj, name, original)
+    del _originals[:]
+    _registered = False
+
+init()
