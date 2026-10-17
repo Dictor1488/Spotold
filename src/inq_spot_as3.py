@@ -23,7 +23,7 @@ class SpotMeta(BaseDAAPIComponent):
         super(SpotMeta, self)._populate()
         g_bridge.component = self
         g_bridge.requested = True
-        LOG.warning('INQ SPOT AS3 component populated')
+        LOG.info('INQ SPOT AS3 component populated')
         if g_bridge.onReady is not None:
             g_bridge.onReady()
 
@@ -74,7 +74,7 @@ class Bridge(object):
         try:
             self.requested = True
             app.loadView(SFViewLoadParams(ALIAS, ALIAS), {})
-            LOG.warning('INQ SPOT AS3 view requested')
+            LOG.info('INQ SPOT AS3 view requested')
         except Exception:
             self.requested = False
             LOG.exception('Cannot load INQ SPOT AS3 view')
@@ -103,7 +103,7 @@ def initialize():
         g_eventBus.addListener(events.ComponentEvent.COMPONENT_REGISTERED,
             g_bridge.onComponentRegistered, scope=EVENT_BUS_SCOPE.GLOBAL)
         g_bridge.registered = True
-    LOG.warning('INQ SPOT AS3 bridge initialized')
+    LOG.info('INQ SPOT AS3 bridge initialized')
 
 def finalize():
     if g_bridge.registered:
