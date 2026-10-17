@@ -1,35 +1,109 @@
-name: Build INQ SPOT prerelease
+name: Build and Release INQ SPOT
+
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Mod version
+        required: true
+        default: 0.3.0-beta.1
+        type: string
   push:
-    tags: ['v*']
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-and-release:
+    name: Build INQ SPOT
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Python 2.7
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine release version
         shell: pwsh
-        run: choco install python2 -y --no-progress
-      - name: Build .wotmod
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ inputs.version }}".Trim()
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          }
+          if ($version -notmatch '^[0-9]+(\.[0-9]+){1,3}([-.][0-9A-Za-z.-]+)?$') {
+            throw "Invalid release version: $version"
+          }
+          "PROJECT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python 2.7 (from INQ Marks workflow)
         shell: pwsh
-        run: python build.py --python27 "C:\Python27\python.exe"
-      - uses: actions/upload-artifact@v4
+        run: |
+          $python27 = "C:\Python27\python.exe"
+          if (-not (Test-Path $python27)) {
+            $installer = Join-Path $env:RUNNER_TEMP "python-2.7.18.amd64.msi"
+            $url = "https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi"
+            $downloaded = $false
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              try {
+                Invoke-WebRequest -Uri $url -OutFile $installer -UseBasicParsing -TimeoutSec 300
+                $downloaded = $true
+                break
+              } catch {
+                Write-Warning $_
+                if ($attempt -lt 3) { Start-Sleep -Seconds (5 * $attempt) }
+              }
+            }
+            if (-not $downloaded) { throw "Unable to download Python 2.7.18" }
+            $process = Start-Process msiexec.exe -ArgumentList @(
+              "/i", $installer, "/qn", "/norestart", "TARGETDIR=C:\Python27"
+            ) -Wait -PassThru
+            if ($process.ExitCode -notin @(0, 3010)) {
+              throw "Python 2.7 installer failed: $($process.ExitCode)"
+            }
+          }
+          if (-not (Test-Path $python27)) { throw "Python 2.7 not installed" }
+          & $python27 --version
+
+      - name: Set build version
+        shell: pwsh
+        run: |
+          $cfg = Get-Content build.json -Raw | ConvertFrom-Json
+          $cfg.version = $env:PROJECT_VERSION
+          $cfg | ConvertTo-Json -Depth 10 | Set-Content build.json -Encoding utf8
+
+      - name: Build WOTMOD package
+        shell: pwsh
+        run: |
+          python build.py --python27 "C:\Python27\python.exe"
+          $package = "dist\INQ_SPOT_$env:PROJECT_VERSION.wotmod"
+          if (-not (Test-Path $package)) { throw "Package was not created: $package" }
+          Write-Host "Package ready: $package"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: INQ-SPOT-wotmod
-          path: dist/*.wotmod
-      - name: Publish GitHub prerelease
-        uses: softprops/action-gh-release@v2
+          name: INQ-SPOT-${{ env.PROJECT_VERSION }}
+          path: dist/INQ_SPOT_${{ env.PROJECT_VERSION }}.wotmod
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Publish GitHub release
+        uses: ncipollo/release-action@v1
         with:
-          files: dist/*.wotmod
+          tag: ${{ env.RELEASE_TAG }}
+          commit: ${{ github.sha }}
+          name: INQ SPOT v${{ env.PROJECT_VERSION }}
+          artifacts: dist/INQ_SPOT_${{ env.PROJECT_VERSION }}.wotmod
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
           prerelease: true
-          generate_release_notes: true
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', '0.3.0-beta.1') || github.ref_name }}
-          target_commitish: ${{ github.sha }}
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
