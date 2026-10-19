@@ -22,6 +22,14 @@ Eight original PNGs are retained in `gui/spottedstatus/styles/0` and `1`.
 - `build.py` — packages compiled SWF, Python bytecode and PNGs as uncompressed `.wotmod`
 - `.github/workflows/release.yml` — Windows/Flex CI and GitHub Release publishing
 
+## Mod settings
+
+When ModsSettingsAPI is installed, INQ SPOT appears in the mods settings screen with:
+- **Показувати індикатори засвіту** — enable/disable icons;
+- **Кружки замість ока** — off selects style 0 (eye), on selects style 1 (circles).
+
+The selected style is saved through ModsSettingsAPI and applied to existing indicators during battle. Without ModsSettingsAPI, the default remains circles (style 1).
+
 ## Release
 
 Manually run **Actions → Build and Release INQ SPOT AS3**, choose version `1.0.0`. Flex SWF compilation is mandatory for each build; Python 2.7 is required. The workflow publishes `dist/INQ_SPOT_1.0.0.wotmod` to Releases.
