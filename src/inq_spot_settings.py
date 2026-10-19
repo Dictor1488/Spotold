@@ -1,15 +1,29 @@
 # -*- coding: utf-8 -*-
-"""INQ SPOT: ModsSettingsAPI integration. Style 0 = eye, 1 = circles."""
+"""Optional ModsSettingsAPI bridge for INQ SPOT (Python 2.7).
+
+Works with Aslain's Gameface menu (preferred) and Izeberg's original API.
+AS3 is initialized independently and receives updated values on UI ready.
+"""
 import logging
+
 LOG = logging.getLogger('INQ_SPOT.settings')
 LINKAGE = 'me.inq.spot'
+_registered = False
+_api = None
 
-try:
-    from gui.modsSettingsApi import g_modsSettingsApi
-except ImportError:
-    g_modsSettingsApi = None
-
-_installed = False
+def _find_api():
+    # Aslain's Gameface menu implements the Izeberg template vocabulary.
+    try:
+        from gui.aslainMenu import g_modsSettingsApi
+        if g_modsSettingsApi is not None:
+            return g_modsSettingsApi
+    except ImportError:
+        pass
+    try:
+        from gui.modsSettingsApi import g_modsSettingsApi
+        return g_modsSettingsApi
+    except ImportError:
+        return None
 
 def _apply(data):
     if not isinstance(data, dict):
@@ -20,44 +34,87 @@ def _apply(data):
         config['enabled'] = bool(data['enabled'])
     if 'circles' in data:
         config['style'] = 1 if bool(data['circles']) else 0
+    # A battle can be running when the user applies settings in the garage
+    # overlay or opens the menu mid-replay. The bridge ignores calls until
+    # its AS3 component becomes ready, then onReady sends current config.
     if mod_inq_spot.g_controller.active:
         mod_inq_spot.g_controller.push_all()
 
-def _changed(linkage, values):
-    if linkage != LINKAGE:
+def _on_changed(linkage, values):
+    if linkage != LINKAGE and linkage != (LINKAGE,):
         return
     try:
         _apply(values)
     except Exception:
         LOG.exception('Failed to apply INQ SPOT settings')
 
-def install():
-    global _installed
-    if _installed or g_modsSettingsApi is None:
+def _template():
+    from gui.mods import mod_inq_spot
+    config = mod_inq_spot.CONFIG
+    return {
+        'modDisplayName': u'INQ SPOT',
+        'settingsVersion': 1,
+        'enabled': True,
+        'column1': [
+            {
+                'type': 'CheckBox',
+                'text': u'Показувати індикатори засвіту',
+                'tooltip': u'{HEADER}Індикатори{/HEADER}{BODY}Увімкнути або приховати значки засвіту.{/BODY}',
+                'value': bool(config.get('enabled', True)),
+                'varName': 'enabled'
+            },
+            {
+                'type': 'Dropdown',
+                'text': u'Вигляд індикаторів',
+                'tooltip': u'{HEADER}Вигляд{/HEADER}{BODY}Око або кружки. Зміни застосовуються одразу.{/BODY}',
+                'options': [{'label': u'Око'}, {'label': u'Кружки'}],
+                'value': 1 if config.get('style', 1) == 1 else 0,
+                'varName': 'styleChoice',
+                'width': 220
+            }
+        ],
+        'column2': []
+    }
+
+def _normalize_and_apply(values):
+    if not isinstance(values, dict):
+        return
+    data = dict(values)
+    if 'styleChoice' in data:
+        try:
+            data['circles'] = int(data['styleChoice']) == 1
+        except (TypeError, ValueError):
+            data['circles'] = False
+    _apply(data)
+
+def _callback(linkage, values):
+    if linkage != LINKAGE and linkage != (LINKAGE,):
         return
     try:
-        from gui.mods import mod_inq_spot
-        template = {
-            'modDisplayName': u'INQ SPOT',
-            'enabled': True,
-            'column1': [
-                {'type': 'CheckBox', 'text': u'Показувати індикатори засвіту',
-                 'value': bool(mod_inq_spot.CONFIG['enabled']), 'varName': 'enabled'},
-                {'type': 'CheckBox', 'text': u'Кружки замість ока',
-                 'value': mod_inq_spot.CONFIG['style'] == 1, 'varName': 'circles'}
-            ],
-            'column2': [
-                {'type': 'Label', 'text': u'Вимкнено: око (styles/0). Увімкнено: кружки (styles/1).'}
-            ]
-        }
-        saved = g_modsSettingsApi.setModTemplate(LINKAGE, template, _changed)
-        _installed = True
-        if saved:
-            _apply(saved)
-        LOG.info('INQ SPOT settings registered')
+        _normalize_and_apply(values)
+    except Exception:
+        LOG.exception('Failed to apply INQ SPOT settings callback')
+
+def install():
+    global _registered, _api
+    if _registered:
+        return
+    api = _find_api()
+    if api is None:
+        LOG.info('ModsSettingsAPI not installed, using default INQ SPOT settings')
+        return
+    try:
+        # The same setModTemplate signature is implemented by both Izeberg
+        # and Aslain. It registers the callback and returns stored settings.
+        saved = api.setModTemplate(LINKAGE, _template(), _callback)
+        _api = api
+        _registered = True
+        _normalize_and_apply(saved)
+        LOG.info('INQ SPOT template registered in ModsSettingsAPI')
     except Exception:
         LOG.exception('INQ SPOT ModsSettingsAPI registration failed')
 
 def uninstall():
-    global _installed
-    _installed = False
+    # The API owns the registered menu template; it has no universal removal
+    # method. Guard against duplicate registration within one client session.
+    return
