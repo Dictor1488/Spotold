@@ -48,10 +48,34 @@ def _on_changed(linkage, values):
     except Exception:
         LOG.exception('Failed to apply INQ SPOT settings')
 
+def _preview_images():
+    """Build native Aslain image controls; never send them to legacy MSA."""
+    try:
+        from gui.aslainMenu import templates
+        create_image = getattr(templates, 'createImage', None)
+        if not callable(create_image):
+            return None
+        result = [[], []]
+        for style in (0, 1):
+            for file_name, label in (
+                    ('missing', u'Не засвічений'),
+                    ('detected', u'У засвіті'),
+                    ('undetected', u'Зник із засвіту')):
+                source = 'coui://gui/spottedstatus/styles/%d/%s.png' % (
+                    style, file_name)
+                result[style].append(create_image(
+                    source, 28, 28, label=label, align='left'))
+        return result
+    except Exception:
+        LOG.exception('Could not build AS3 icon previews for Mod Menu')
+        return None
+
+
 def _template():
     from gui.mods import mod_inq_spot
     config = mod_inq_spot.CONFIG
-    return {
+    previews = _preview_images()
+    result = {
         'modDisplayName': u'INQ SPOT',
         'settingsVersion': 1,
         'enabled': True,
@@ -75,6 +99,12 @@ def _template():
         ],
         'column2': []
     }
+    if previews is not None:
+        result['column1'].append({'type': 'Label', 'text': u'Око — приклади'})
+        result['column1'].extend(previews[0])
+        result['column2'].append({'type': 'Label', 'text': u'Кружки — приклади'})
+        result['column2'].extend(previews[1])
+    return result
 
 def _normalize_and_apply(values):
     if not isinstance(values, dict):
