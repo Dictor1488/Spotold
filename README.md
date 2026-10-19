@@ -28,7 +28,7 @@ When Aslain's menu or Izeberg's ModsSettingsAPI is installed, INQ SPOT appears i
 - **Показувати індикатори засвіту** — enable/disable icons;
 - **Вигляд індикаторів** — dropdown: Око (style 0) or Кружки (style 1).
 
-The selected style is saved through ModsSettingsAPI and applied to existing indicators during battle. Without ModsSettingsAPI, the default remains circles (style 1).
+When Aslain's Gameface Mod Menu is installed, the settings panel also shows the original PNG previews for both styles (never spotted, spotted, lost) side by side, using its supported image controls. Older ModsSettingsAPI variants retain the text-only style chooser.\n\nThe selected style is saved through ModsSettingsAPI and applied to existing indicators during battle. Without ModsSettingsAPI, the default remains circles (style 1).
 
 ## Release
 
