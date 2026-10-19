@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-SOURCES = ("mod_inq_spot.py", "inq_spot_as3.py")
+SOURCES = ("mod_inq_spot.py", "inq_spot_as3.py", "inq_spot_settings.py")
 SWF = ROOT / "as3/bin/inqSpotPanel.swf"
 
 def write(archive, name, data):
@@ -56,7 +56,7 @@ def build(python27):
             if names[0]!="meta.xml":raise RuntimeError("Missing meta.xml first")
             if any(x.compress_type!=zipfile.ZIP_STORED for x in z.infolist()):
                 raise RuntimeError("Unsupported compression")
-            if len(names)!=12:raise RuntimeError("Unexpected entry count: %s" % names)
+            if len(names)!=1+len(SOURCES)+1+len(icons):raise RuntimeError("Unexpected entry count: %s" % names)
         print(path)
 
 if __name__=="__main__":
