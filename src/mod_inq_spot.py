@@ -47,7 +47,7 @@ class Controller(object):
 
     def start(self):
         self.stop()
-        if not CONFIG['enabled'] or self.special():
+        if self.special():
             return
         self.active = True
         self.colorblind = bool(dependency.instance(ISettingsCore).getSetting(GRAPHICS.COLOR_BLIND))
@@ -72,7 +72,7 @@ class Controller(object):
                       CONFIG['offsetX'], self.colorblind)
         for vid, state in self.states.iteritems():
             g_bridge.send('as_setStateS', vid, state)
-        g_bridge.send('as_setVisibilityS', True)
+        g_bridge.send('as_setVisibilityS', bool(CONFIG['enabled']))
         g_bridge.send('as_refreshAllS')
 
     def aoi(self, vid, visible):
@@ -152,6 +152,8 @@ def init():
     _patch(PlayerAvatar, '_PlayerAvatar__destroyGUI', _stop)
     _patch(ArenaVehiclesPlugin, '_setInAoI', _aoi)
     _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _spotted)
+    from gui.mods import inq_spot_settings
+    inq_spot_settings.install()
     _initialized = True
     LOG.info('INQ SPOT AS3 registration complete')
 
@@ -164,6 +166,8 @@ def fini():
         if getattr(obj, name) is wrapped:
             setattr(obj, name, old)
     del _originals[:]
+    from gui.mods import inq_spot_settings
+    inq_spot_settings.uninstall()
     fini_panel()
     _initialized = False
 
