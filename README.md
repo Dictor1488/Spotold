@@ -24,9 +24,9 @@ Eight original PNGs are retained in `gui/spottedstatus/styles/0` and `1`.
 
 ## Mod settings
 
-When ModsSettingsAPI is installed, INQ SPOT appears in the mods settings screen with:
+When Aslain's menu or Izeberg's ModsSettingsAPI is installed, INQ SPOT appears in the mods settings screen with:
 - **Показувати індикатори засвіту** — enable/disable icons;
-- **Кружки замість ока** — off selects style 0 (eye), on selects style 1 (circles).
+- **Вигляд індикаторів** — dropdown: Око (style 0) or Кружки (style 1).
 
 The selected style is saved through ModsSettingsAPI and applied to existing indicators during battle. Without ModsSettingsAPI, the default remains circles (style 1).
 
