@@ -77,41 +77,8 @@ def _callback(linkage, values):
         LOG.exception('Failed to apply INQ SPOT settings')
 
 
-def _preview_images():
-    """Only Gameface Mod Menu exposes the Image control."""
-    try:
-        from gui.modsSettingsApi import templates
-        make_image = getattr(templates, 'createImage', None)
-        if not callable(make_image):
-            return None
-        columns = [[], []]
-        for style in (0, 1):
-            for filename, label in (('missing', u'Не засвічений'),
-                                    ('detected', u'У засвіті'),
-                                    ('undetected', u'Зник із засвіту')):
-                path = 'coui://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
-                columns[style].append(make_image(path, 28, 28, label=label))
-        return columns
-    except Exception:
-        LOG.warning('Gameface image controls not supported by active Mod Menu', exc_info=True)
-        return None
-
-
-def _html_previews(style):
-    """Fallback labels for menus supporting HTML images."""
-    rows = []
-    for filename, label in (('missing', u'Не засвічений'),
-                            ('detected', u'У засвіті'),
-                            ('undetected', u'Зник із засвіту')):
-        path = 'img://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
-        rows.append({'type': 'Label', 'useHTML': True,
-                     'text': u'<img src="%s" width="24" height="24"/> %s' % (path, label)})
-    return rows
-
-
 def _template():
     config = _config
-    previews = _preview_images()
     result = {
         'modDisplayName': u'INQ SPOT',
         'settingsVersion': 1,
@@ -127,28 +94,22 @@ def _template():
             {
                 'type': 'CheckBox',
                 'text': u'Око',
-                'tooltip': u'{HEADER}Око{/HEADER}{BODY}Використовувати значки у вигляді ока.{/BODY}',
+                'tooltip': u'{HEADER}Око{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/0/detected.png" width="48" height="48"/> Значки у вигляді ока.{/BODY}',
+                'tooltipIcon': 'img://gui/spottedstatus/styles/0/detected.png',
                 'value': int(config.get('style', 1)) == 0,
                 'varName': 'styleEye'
             },
             {
                 'type': 'CheckBox',
                 'text': u'Кружки',
-                'tooltip': u'{HEADER}Кружки{/HEADER}{BODY}Використовувати круглі індикатори.{/BODY}',
+                'tooltip': u'{HEADER}Кружки{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Круглі індикатори.{/BODY}',
+                'tooltipIcon': 'img://gui/spottedstatus/styles/1/detected.png',
                 'value': int(config.get('style', 1)) == 1,
                 'varName': 'styleCircles'
             }
         ],
         'column2': []
     }
-    result['column1'].append({'type': 'Label', 'text': u'Око — приклади'})
-    result['column2'].append({'type': 'Label', 'text': u'Кружки — приклади'})
-    if previews is not None:
-        result['column1'].extend(previews[0])
-        result['column2'].extend(previews[1])
-    else:
-        result['column1'].extend(_html_previews(0))
-        result['column2'].extend(_html_previews(1))
     return result
 
 def install(config=None, refresh=None):
