@@ -73,8 +73,7 @@ def _preview_images():
 
 
 def _template():
-    from gui.mods import mod_inq_spot
-    config = mod_inq_spot.CONFIG
+    config = _config
     previews = _preview_images()
     result = {
         'modDisplayName': u'INQ SPOT',
