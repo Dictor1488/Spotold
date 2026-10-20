@@ -10,6 +10,8 @@ LOG = logging.getLogger('INQ_SPOT.settings')
 LINKAGE = 'me.inq.spot'
 _registered = False
 _api = None
+_config = {'enabled': True, 'style': 1}
+_refresh = None
 
 def _find_api():
     # Aslain's Gameface menu implements the Izeberg template vocabulary.
@@ -28,8 +30,7 @@ def _find_api():
 def _apply(data):
     if not isinstance(data, dict):
         return
-    from gui.mods import mod_inq_spot
-    config = mod_inq_spot.CONFIG
+    config = _config
     if 'enabled' in data:
         config['enabled'] = bool(data['enabled'])
     if 'circles' in data:
@@ -37,8 +38,8 @@ def _apply(data):
     # A battle can be running when the user applies settings in the garage
     # overlay or opens the menu mid-replay. The bridge ignores calls until
     # its AS3 component becomes ready, then onReady sends current config.
-    if mod_inq_spot.g_controller.active:
-        mod_inq_spot.g_controller.push_all()
+    if _refresh is not None:
+        _refresh()
 
 def _on_changed(linkage, values):
     if linkage != LINKAGE and linkage != (LINKAGE,):
@@ -125,8 +126,12 @@ def _callback(linkage, values):
     except Exception:
         LOG.exception('Failed to apply INQ SPOT settings callback')
 
-def install():
-    global _registered, _api
+def install(config=None, refresh=None):
+    global _registered, _api, _config, _refresh
+    if config is not None:
+        _config = config
+    if refresh is not None:
+        _refresh = refresh
     if _registered:
         return
     api = _find_api()
