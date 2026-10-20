@@ -50,7 +50,7 @@ def _on_changed(linkage, values):
         LOG.exception('Failed to apply INQ SPOT settings')
 
 def _preview_images():
-    """Use exposed templates API, not the absent gui.aslainMenu module."""
+    """Only Gameface Mod Menu exposes the Image control."""
     try:
         from gui.modsSettingsApi import templates
         make_image = getattr(templates, 'createImage', None)
@@ -61,23 +61,24 @@ def _preview_images():
             for filename, label in (('missing', u'Не засвічений'),
                                     ('detected', u'У засвіті'),
                                     ('undetected', u'Зник із засвіту')):
-                path = 'img://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
+                path = 'coui://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
                 columns[style].append(make_image(path, 28, 28, label=label))
         return columns
     except Exception:
-        LOG.warning('Image control unavailable; falling back to HTML labels')
+        LOG.warning('Gameface image controls not supported by active Mod Menu', exc_info=True)
         return None
 
 
 def _html_previews(style):
-    result = []
+    """Fallback labels for menus supporting HTML images."""
+    rows = []
     for filename, label in (('missing', u'Не засвічений'),
                             ('detected', u'У засвіті'),
                             ('undetected', u'Зник із засвіту')):
         path = 'img://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
-        result.append({'type': 'Label', 'useHTML': True,
-                       'text': u'<img src="%s" width="24" height="24"/>  %s' % (path, label)})
-    return result
+        rows.append({'type': 'Label', 'useHTML': True,
+                     'text': u'<img src="%s" width="24" height="24"/> %s' % (path, label)})
+    return rows
 
 
 def _template():
