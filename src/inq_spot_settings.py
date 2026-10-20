@@ -73,7 +73,16 @@ def _template():
             ),
             radio
         ],
-        'column2': []
+        'column2': [
+            templates.createLabel(
+                u'Eye preview',
+                tooltip=u'{HEADER}Eye{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/0/detected.png" width="48" height="48"/> Eye indicator{/BODY}'
+            ),
+            templates.createLabel(
+                u'Dot preview',
+                tooltip=u'{HEADER}Dot{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Dot indicator{/BODY}'
+            )
+        ]
     }
 
 
