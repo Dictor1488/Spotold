@@ -27,90 +27,56 @@ def _find_api():
     except ImportError:
         return None
 
-_syncing = False
-
 def _apply(data):
     if not isinstance(data, dict):
         return
     if 'enabled' in data:
         _config['enabled'] = bool(data['enabled'])
-    old_style = int(_config.get('style', 1))
-    has_eye = 'styleEye' in data
-    has_circles = 'styleCircles' in data
-    if has_eye or has_circles:
-        eye = bool(data.get('styleEye', old_style == 0))
-        circles = bool(data.get('styleCircles', old_style == 1))
-        # Prefer the newly checked option when both values arrive.
-        if eye != circles:
-            _config['style'] = 0 if eye else 1
-        elif eye and circles:
-            _config['style'] = 0 if old_style == 1 else 1
-        else:
-            _config['style'] = old_style
-    elif 'styleChoice' in data:
+    # A single radio choice is always mutually exclusive.
+    if 'styleChoice' in data:
         try:
             _config['style'] = 0 if int(data['styleChoice']) == 0 else 1
         except (TypeError, ValueError):
-            pass
+            LOG.warning('Invalid INQ SPOT styleChoice: %r', data['styleChoice'])
     if _refresh is not None:
         _refresh()
 
 
 def _callback(linkage, values):
-    global _syncing
-    if linkage != LINKAGE and linkage != (LINKAGE,):
-        return
-    if _syncing:
+    if linkage != LINKAGE:
         return
     try:
         _apply(values)
-        if _api is not None and ('styleEye' in values or 'styleCircles' in values):
-            _syncing = True
-            try:
-                _api.updateModSettings(LINKAGE, newSettings={
-                    'styleEye': _config['style'] == 0,
-                    'styleCircles': _config['style'] == 1
-                })
-            finally:
-                _syncing = False
     except Exception:
         LOG.exception('Failed to apply INQ SPOT settings')
 
 
 def _template():
-    config = _config
-    result = {
+    from gui.modsSettingsApi import templates
+    # Use the public helper from the actual installed ModsSettingsAPI instead
+    # of guessing serialized component type strings.
+    radio = templates.createRadioButtonGroup(
+        u'Indicator style', 'styleChoice',
+        templates.generateOptions([u'Eye', u'Dot']),
+        0 if int(_config.get('style', 1)) == 0 else 1,
+        inline=True,
+        tooltip=u'{HEADER}Indicator style{/HEADER}{BODY}Eye or Dot.{/BODY}'
+    )
+    return {
         'modDisplayName': u'INQ SPOT',
-        'settingsVersion': 1,
+        # Do not pin settingsVersion: the menu must migrate template changes.
         'enabled': True,
         'column1': [
-            {
-                'type': 'CheckBox',
-                'text': u'Показувати індикатори засвіту',
-                'tooltip': u'{HEADER}Індикатори{/HEADER}{BODY}Увімкнути або приховати значки засвіту.{/BODY}',
-                'value': bool(config.get('enabled', True)),
-                'varName': 'enabled'
-            },
-            {
-                'type': 'CheckBox',
-                'text': u'Eye',
-                'tooltip': u'{HEADER}Eye{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/0/detected.png" width="48" height="48"/> Значки у вигляді ока.{/BODY}',
-                'tooltipIcon': 'img://gui/spottedstatus/styles/0/detected.png',
-                'value': int(config.get('style', 1)) == 0,
-                'varName': 'styleEye'
-            },
-            {
-                'type': 'CheckBox',
-                'text': u'Dot',
-                'tooltip': u'{HEADER}Dot{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Круглі індикатори.{/BODY}',
-                'tooltipIcon': 'img://gui/spottedstatus/styles/1/detected.png',
-                'value': int(config.get('style', 1)) == 1,
-                'varName': 'styleCircles'
-            }
+            templates.createCheckbox(
+                u'Показувати індикатори засвіту', 'enabled',
+                bool(_config.get('enabled', True)),
+                tooltip=u'{HEADER}Індикатори{/HEADER}{BODY}Показувати значки засвіту.{/BODY}'
+            ),
+            radio
         ],
         'column2': []
     }
-    return result
+
 
 def install(config=None, refresh=None):
     global _registered, _api, _config, _refresh
