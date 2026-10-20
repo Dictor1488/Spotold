@@ -50,26 +50,34 @@ def _on_changed(linkage, values):
         LOG.exception('Failed to apply INQ SPOT settings')
 
 def _preview_images():
-    """Build native Aslain image controls; never send them to legacy MSA."""
+    """Use exposed templates API, not the absent gui.aslainMenu module."""
     try:
-        from gui.aslainMenu import templates
-        create_image = getattr(templates, 'createImage', None)
-        if not callable(create_image):
+        from gui.modsSettingsApi import templates
+        make_image = getattr(templates, 'createImage', None)
+        if not callable(make_image):
             return None
-        result = [[], []]
+        columns = [[], []]
         for style in (0, 1):
-            for file_name, label in (
-                    ('missing', u'Не засвічений'),
-                    ('detected', u'У засвіті'),
-                    ('undetected', u'Зник із засвіту')):
-                source = 'coui://gui/spottedstatus/styles/%d/%s.png' % (
-                    style, file_name)
-                result[style].append(create_image(
-                    source, 28, 28, label=label, align='left'))
-        return result
+            for filename, label in (('missing', u'Не засвічений'),
+                                    ('detected', u'У засвіті'),
+                                    ('undetected', u'Зник із засвіту')):
+                path = 'img://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
+                columns[style].append(make_image(path, 28, 28, label=label))
+        return columns
     except Exception:
-        LOG.exception('Could not build AS3 icon previews for Mod Menu')
+        LOG.warning('Image control unavailable; falling back to HTML labels')
         return None
+
+
+def _html_previews(style):
+    result = []
+    for filename, label in (('missing', u'Не засвічений'),
+                            ('detected', u'У засвіті'),
+                            ('undetected', u'Зник із засвіту')):
+        path = 'img://gui/spottedstatus/styles/%d/%s.png' % (style, filename)
+        result.append({'type': 'Label', 'useHTML': True,
+                       'text': u'<img src="%s" width="24" height="24"/>  %s' % (path, label)})
+    return result
 
 
 def _template():
@@ -99,11 +107,14 @@ def _template():
         ],
         'column2': []
     }
+    result['column1'].append({'type': 'Label', 'text': u'Око — приклади'})
+    result['column2'].append({'type': 'Label', 'text': u'Кружки — приклади'})
     if previews is not None:
-        result['column1'].append({'type': 'Label', 'text': u'Око — приклади'})
         result['column1'].extend(previews[0])
-        result['column2'].append({'type': 'Label', 'text': u'Кружки — приклади'})
         result['column2'].extend(previews[1])
+    else:
+        result['column1'].extend(_html_previews(0))
+        result['column2'].extend(_html_previews(1))
     return result
 
 def _normalize_and_apply(values):
