@@ -153,7 +153,7 @@ def init():
     _patch(ArenaVehiclesPlugin, '_setInAoI', _aoi)
     _patch(BattleFieldCtrl, '_BattleFieldCtrl__updateSpottedStatus', _spotted)
     from gui.mods import inq_spot_settings
-    inq_spot_settings.install()
+    inq_spot_settings.install(CONFIG, g_controller.push_all)
     _initialized = True
     LOG.info('INQ SPOT AS3 registration complete')
 
