@@ -9,7 +9,7 @@ on:
       version:
         description: 'Mod version'
         required: true
-        default: '1.0.3'
+        default: '1.0.4'
 
 permissions:
   contents: write
