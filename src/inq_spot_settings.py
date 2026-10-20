@@ -27,27 +27,55 @@ def _find_api():
     except ImportError:
         return None
 
+_syncing = False
+
 def _apply(data):
     if not isinstance(data, dict):
         return
-    config = _config
     if 'enabled' in data:
-        config['enabled'] = bool(data['enabled'])
-    if 'circles' in data:
-        config['style'] = 1 if bool(data['circles']) else 0
-    # A battle can be running when the user applies settings in the garage
-    # overlay or opens the menu mid-replay. The bridge ignores calls until
-    # its AS3 component becomes ready, then onReady sends current config.
+        _config['enabled'] = bool(data['enabled'])
+    old_style = int(_config.get('style', 1))
+    has_eye = 'styleEye' in data
+    has_circles = 'styleCircles' in data
+    if has_eye or has_circles:
+        eye = bool(data.get('styleEye', old_style == 0))
+        circles = bool(data.get('styleCircles', old_style == 1))
+        # Prefer the newly checked option when both values arrive.
+        if eye != circles:
+            _config['style'] = 0 if eye else 1
+        elif eye and circles:
+            _config['style'] = 0 if old_style == 1 else 1
+        else:
+            _config['style'] = old_style
+    elif 'styleChoice' in data:
+        try:
+            _config['style'] = 0 if int(data['styleChoice']) == 0 else 1
+        except (TypeError, ValueError):
+            pass
     if _refresh is not None:
         _refresh()
 
-def _on_changed(linkage, values):
+
+def _callback(linkage, values):
+    global _syncing
     if linkage != LINKAGE and linkage != (LINKAGE,):
+        return
+    if _syncing:
         return
     try:
         _apply(values)
+        if _api is not None and ('styleEye' in values or 'styleCircles' in values):
+            _syncing = True
+            try:
+                _api.updateModSettings(LINKAGE, newSettings={
+                    'styleEye': _config['style'] == 0,
+                    'styleCircles': _config['style'] == 1
+                })
+            finally:
+                _syncing = False
     except Exception:
         LOG.exception('Failed to apply INQ SPOT settings')
+
 
 def _preview_images():
     """Only Gameface Mod Menu exposes the Image control."""
@@ -97,13 +125,18 @@ def _template():
                 'varName': 'enabled'
             },
             {
-                'type': 'RadioButtonGroup',
-                'text': u'Вигляд індикаторів',
-                'tooltip': u'{HEADER}Вигляд{/HEADER}{BODY}Око або кружки. Зміни застосовуються одразу.{/BODY}',
-                'options': [{'label': u'◉ Око'}, {'label': u'● Кружки'}],
-                'value': 1 if config.get('style', 1) == 1 else 0,
-                'varName': 'styleChoice',
-                'inline': True
+                'type': 'CheckBox',
+                'text': u'Око',
+                'tooltip': u'{HEADER}Око{/HEADER}{BODY}Використовувати значки у вигляді ока.{/BODY}',
+                'value': int(config.get('style', 1)) == 0,
+                'varName': 'styleEye'
+            },
+            {
+                'type': 'CheckBox',
+                'text': u'Кружки',
+                'tooltip': u'{HEADER}Кружки{/HEADER}{BODY}Використовувати круглі індикатори.{/BODY}',
+                'value': int(config.get('style', 1)) == 1,
+                'varName': 'styleCircles'
             }
         ],
         'column2': []
@@ -117,25 +150,6 @@ def _template():
         result['column1'].extend(_html_previews(0))
         result['column2'].extend(_html_previews(1))
     return result
-
-def _normalize_and_apply(values):
-    if not isinstance(values, dict):
-        return
-    data = dict(values)
-    if 'styleChoice' in data:
-        try:
-            data['circles'] = int(data['styleChoice']) == 1
-        except (TypeError, ValueError):
-            data['circles'] = False
-    _apply(data)
-
-def _callback(linkage, values):
-    if linkage != LINKAGE and linkage != (LINKAGE,):
-        return
-    try:
-        _normalize_and_apply(values)
-    except Exception:
-        LOG.exception('Failed to apply INQ SPOT settings callback')
 
 def install(config=None, refresh=None):
     global _registered, _api, _config, _refresh
@@ -155,7 +169,7 @@ def install(config=None, refresh=None):
         saved = api.setModTemplate(LINKAGE, _template(), _callback)
         _api = api
         _registered = True
-        _normalize_and_apply(saved)
+        _apply(saved)
         LOG.info('INQ SPOT template registered in ModsSettingsAPI')
     except Exception:
         LOG.exception('INQ SPOT ModsSettingsAPI registration failed')
