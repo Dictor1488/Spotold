@@ -96,13 +96,13 @@ def _template():
                 'varName': 'enabled'
             },
             {
-                'type': 'Dropdown',
+                'type': 'RadioButtonGroup',
                 'text': u'Вигляд індикаторів',
                 'tooltip': u'{HEADER}Вигляд{/HEADER}{BODY}Око або кружки. Зміни застосовуються одразу.{/BODY}',
                 'options': [{'label': u'Око'}, {'label': u'Кружки'}],
                 'value': 1 if config.get('style', 1) == 1 else 0,
                 'varName': 'styleChoice',
-                'width': 220
+                'inline': True
             }
         ],
         'column2': []
