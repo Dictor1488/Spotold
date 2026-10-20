@@ -1,7 +1,7 @@
 {
   "id": "me.inq.spot",
   "name": "INQ SPOT",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "game_version": "2.4.1.0",
   "description": "Enemy spotting indicators anchored to players-panel rows (AS3)",
   "author": "INQ"
