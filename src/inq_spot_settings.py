@@ -93,16 +93,16 @@ def _template():
             },
             {
                 'type': 'CheckBox',
-                'text': u'Око',
-                'tooltip': u'{HEADER}Око{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/0/detected.png" width="48" height="48"/> Значки у вигляді ока.{/BODY}',
+                'text': u'Eye',
+                'tooltip': u'{HEADER}Eye{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/0/detected.png" width="48" height="48"/> Значки у вигляді ока.{/BODY}',
                 'tooltipIcon': 'img://gui/spottedstatus/styles/0/detected.png',
                 'value': int(config.get('style', 1)) == 0,
                 'varName': 'styleEye'
             },
             {
                 'type': 'CheckBox',
-                'text': u'Кружки',
-                'tooltip': u'{HEADER}Кружки{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Круглі індикатори.{/BODY}',
+                'text': u'Dot',
+                'tooltip': u'{HEADER}Dot{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Круглі індикатори.{/BODY}',
                 'tooltipIcon': 'img://gui/spottedstatus/styles/1/detected.png',
                 'value': int(config.get('style', 1)) == 1,
                 'varName': 'styleCircles'
