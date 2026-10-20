@@ -59,7 +59,6 @@ def _template():
         u'Indicator style', 'styleChoice',
         templates.generateOptions([u'Eye', u'Dot']),
         0 if int(_config.get('style', 1)) == 0 else 1,
-        inline=True,
         tooltip=u'{HEADER}Indicator style{/HEADER}{BODY}Eye or Dot.{/BODY}'
     )
     return {
