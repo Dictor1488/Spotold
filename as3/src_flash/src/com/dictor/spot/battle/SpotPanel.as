@@ -79,7 +79,7 @@ package com.dictor.spot.battle {
             if (!anchor) anchor = member(item, "vehicleTF") as DisplayObject;
             text.x = Math.round(anchor ? anchor.x + (align == 0 ? -109 : 22) + offset : offset);
             text.y = Math.round(anchor ? anchor.y : 0);
-            text.htmlText = '<img src="img://gui/spottedstatus/styles/' + style + '/' + icon + '.png" width="19" height="19">';
+            text.htmlText = '<img src="img://gui/spottedstatus/styles/' + style + '/' + icon + '.png" width="' + (style == 2 ? 15 : 19) + '" height="' + (style == 2 ? 24 : 19) + '">';
             text.visible = Boolean(member(item, "visible"));
         }
         public function as_setState(id:int, state:int):void {
@@ -88,7 +88,7 @@ package com.dictor.spot.battle {
             redraw(id);
         }
         public function as_setSettings(styleValue:int, alignValue:int, xOffset:int, cb:Boolean):void {
-            style = styleValue == 0 ? 0 : 1;
+            style = Math.max(0, Math.min(2, styleValue));
             align = alignValue == 0 ? 0 : 1;
             offset = Math.max(-150, Math.min(150, xOffset));
             colorblind = cb;
