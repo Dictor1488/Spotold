@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Build INQ SPOT AS3 (Scaleform) WOTMOD. Requires compiled SWF + Python 2.7."""
 import argparse
+import base64
+from lamp_assets import LAMPS
 import json
 from pathlib import Path
 import subprocess
@@ -49,6 +51,8 @@ def build(python27):
             write(z,"res/gui/flash/inqSpotPanel.swf",SWF.read_bytes())
             for icon in icons:
                 write(z,"res/"+icon.relative_to(ROOT).as_posix(),icon.read_bytes())
+            for name, raw in sorted(LAMPS.items()):
+                write(z,"res/gui/spottedstatus/styles/2/"+name+".png",base64.b64decode(raw))
         with zipfile.ZipFile(path) as z:
             if z.testzip() is not None: raise RuntimeError("Corrupt .wotmod")
             names=z.namelist()
@@ -56,7 +60,7 @@ def build(python27):
             if names[0]!="meta.xml":raise RuntimeError("Missing meta.xml first")
             if any(x.compress_type!=zipfile.ZIP_STORED for x in z.infolist()):
                 raise RuntimeError("Unsupported compression")
-            if len(names)!=1+len(SOURCES)+1+len(icons):raise RuntimeError("Unexpected entry count: %s" % names)
+            if len(names)!=1+len(SOURCES)+1+len(icons)+len(LAMPS):raise RuntimeError("Unexpected entry count: %s" % names)
         print(path)
 
 if __name__=="__main__":
