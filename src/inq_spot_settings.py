@@ -35,7 +35,7 @@ def _apply(data):
     # A single radio choice is always mutually exclusive.
     if 'styleChoice' in data:
         try:
-            _config['style'] = 0 if int(data['styleChoice']) == 0 else 1
+            _config['style'] = max(0, min(2, int(data['styleChoice'])))
         except (TypeError, ValueError):
             LOG.warning('Invalid INQ SPOT styleChoice: %r', data['styleChoice'])
     if _refresh is not None:
@@ -57,9 +57,9 @@ def _template():
     # of guessing serialized component type strings.
     radio = templates.createRadioButtonGroup(
         u'Indicator style', 'styleChoice',
-        templates.generateOptions([u'Eye', u'Dot']),
-        0 if int(_config.get('style', 1)) == 0 else 1,
-        tooltip=u'{HEADER}Indicator style{/HEADER}{BODY}Eye or Dot.{/BODY}'
+        templates.generateOptions([u'Eye', u'Dot', u'SPOT lamps']),
+        max(0, min(2, int(_config.get('style', 1)))),
+        tooltip=u'{HEADER}Indicator style{/HEADER}{BODY}Eye, Dot or SPOT lamps.{/BODY}'
     )
     return {
         'modDisplayName': u'INQ SPOT',
@@ -81,6 +81,10 @@ def _template():
             templates.createLabel(
                 u'Dot preview',
                 tooltip=u'{HEADER}Dot{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/1/detected.png" width="48" height="48"/> Dot indicator{/BODY}'
+            ),
+            templates.createLabel(
+                u'SPOT lamps preview',
+                tooltip=u'{HEADER}SPOT lamps{/HEADER}{BODY}<img src="img://gui/spottedstatus/styles/2/detected.png" width="30" height="50"/> Original SPOT lamp indicator{/BODY}'
             )
         ]
     }
