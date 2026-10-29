@@ -12,7 +12,7 @@ Indicators are attached to the enemy player-panel row by `vehicleID`. The mod ha
 - `colorblind`: alternate hidden-state image when colorblind mode is enabled
 - Destroyed enemy: indicator hidden
 
-The first two styles use PNGs in `gui/spottedstatus/styles/{0,1}/`. The third style is generated at package time from `lamp_assets.py` into `gui/spottedstatus/styles/2/`.
+The first two styles use PNGs in `gui/spottedstatus/styles/{0,1}/`. The third style is stored as four PNG files in `gui/spottedstatus/styles/2/`.
 
 ## Settings
 
@@ -26,7 +26,6 @@ Aslain's menu / Izeberg ModsSettingsAPI supports an enabled checkbox and the sty
 - `as3/src_flash/src/`: AS3 panel, row attachment, and injector
 - `as3/libs/`: AS3 compilation dependencies
 - `gui/spottedstatus/styles/`: Eye and Dot images
-- `lamp_assets.py`: original SPOT lamp images encoded for build packaging
 - `build.py` / `build.json`: create the .wotmod
 - `.github/workflows/release.yml`: Windows/Flex build and GitHub release
 
