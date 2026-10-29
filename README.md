@@ -1,39 +1,41 @@
-# INQ SPOT 1.0.0
+# INQ SPOT
 
-Standalone enemy spotting indicators for **World of Tanks 2.4.1**, using ActionScript 3 / Scaleform. Indicators attach to the actual enemy row through `getHolderByVehicleID(vehicleID)`, as in HpE. No OldSkool core is required.
+Enemy spotting indicators for World of Tanks 2.4.1, rendered with ActionScript 3 / Scaleform.
 
-## Spotting indicators
+Indicators are attached to the enemy player-panel row by `vehicleID`. The mod has three selectable styles: **Eye**, **Dot**, and **SPOT lamps** (original graphics from the SPOT Gameface mod).
 
-- `missing.png`: never spotted
-- `detected.png`: currently visible
-- `undetected.png`: previously spotted, now lost (or `colorblind.png` when colorblind mode is on)
-- Destroyed enemies: icon hidden.
+## Indicator states
 
-Eight original PNGs are retained in `gui/spottedstatus/styles/0` and `1`.
+- `missing`: enemy not yet spotted
+- `detected`: enemy currently spotted
+- `undetected`: enemy previously spotted, currently hidden
+- `colorblind`: alternate hidden-state image when colorblind mode is enabled
+- Destroyed enemy: indicator hidden
 
-## Source structure
+The first two styles use PNGs in `gui/spottedstatus/styles/{0,1}/`. The third style is generated at package time from `lamp_assets.py` into `gui/spottedstatus/styles/2/`.
 
-- `src/mod_inq_spot.py` — battle hooks and spotting state controller (Python 2.7)
-- `src/inq_spot_as3.py` — DAAPI/AS3 communication and registration (Python 2.7)
-- `as3/src_flash/src/InqSpotPanel.as` — injector
-- `as3/src_flash/src/com/dictor/spot/battle/SpotPanel.as` — AS3 row attachment and icon presentation
-- `as3/src_flash/src/com/dictor/hpe/injector/` — battle injection primitives adapted from HpE
-- `as3/libs/` — required local SWC libraries
-- `build.py` — packages compiled SWF, Python bytecode and PNGs as uncompressed `.wotmod`
-- `.github/workflows/release.yml` — Windows/Flex CI and GitHub Release publishing
+## Settings
 
-## Mod settings
+Aslain's menu / Izeberg ModsSettingsAPI supports an enabled checkbox and the style choices **Eye (0)**, **Dot (1)**, **SPOT lamps (2)**. The default is Dot. The choice updates during a battle.
 
-When Aslain's menu or Izeberg's ModsSettingsAPI is installed, INQ SPOT appears in the mods settings screen with:
-- **Показувати індикатори засвіту** — enable/disable icons;
-- **Вигляд індикаторів** — dropdown: Око (style 0) or Кружки (style 1).
+## Source and build
 
-When Aslain's Gameface Mod Menu is installed, the settings panel also shows the original PNG previews for both styles (never spotted, spotted, lost) side by side, using its supported image controls. Older ModsSettingsAPI variants retain the text-only style chooser.\n\nThe selected style is saved through ModsSettingsAPI and applied to existing indicators during battle. Without ModsSettingsAPI, the default remains circles (style 1).
+- `src/mod_inq_spot.py`: battle events and spotting-state controller (Python 2.7)
+- `src/inq_spot_as3.py`: Scaleform bridge (Python 2.7)
+- `src/inq_spot_settings.py`: optional menu integration (Python 2.7)
+- `as3/src_flash/src/`: AS3 panel, row attachment, and injector
+- `as3/libs/`: AS3 compilation dependencies
+- `gui/spottedstatus/styles/`: Eye and Dot images
+- `lamp_assets.py`: original SPOT lamp images encoded for build packaging
+- `build.py` / `build.json`: create the .wotmod
+- `.github/workflows/release.yml`: Windows/Flex build and GitHub release
 
-## Release
+Build locally after compiling `as3/bin/inqSpotPanel.swf`:
 
-Manually run **Actions → Build and Release INQ SPOT AS3**, choose version `1.0.0`. Flex SWF compilation is mandatory for each build; Python 2.7 is required. The workflow publishes `dist/INQ_SPOT_1.0.0.wotmod` to Releases.
+```sh
+python build.py --python27 /path/to/python2.7
+```
 
-## Verification
+Or run **Actions → Build and Release INQ SPOT AS3** with a version number.
 
-The latest provided game log confirmed the 0.4.0-beta.1 WOTMOD loaded, the AS3 bridge and view initialized, 15 enemy states were sent, and spotting transitions arrived without INQ SPOT errors. This supports releasing a clean version, although rendering alignment in all player-panel modes has not been independently confirmed. For in-game problems, send `game.log`.
+In-game alignment and the newly added lamps need a fresh battle test. Previous log checks do not verify the third style.
